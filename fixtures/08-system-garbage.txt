@@ -1,0 +1,11 @@
+this is some junk text before any message
+20/11/26, 10:00 - Messages and calls are end-to-end encrypted. No one outside of this chat, not even WhatsApp, can read or listen to them. Tap to learn more.
+20/11/26, 10:00 - Ira created group "Hackathon: Team 7"
+20/11/26, 10:01 - Ira added Omar
+20/11/26, 10:02 - Omar joined using this group's invite link
+20/11/26, 10:05 - Ira: <Media omitted>
+20/11/26, 10:06 - Omar: This message was deleted
+20/11/26, 10:07 - Ira: I'll set up the GitHub repo
+45/99/26, 99:99 - Omar: garbled header line
+20/11/26, 10:09 - Omar left
+20/11/26, 10:10 - Ira: Repo is ready

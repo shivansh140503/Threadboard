@@ -1,0 +1,12 @@
+node_modules
+dist
+.vercel
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+# Never commit real chat exports
+*.zip
+WhatsApp Chat*.txt
+_chat.txt

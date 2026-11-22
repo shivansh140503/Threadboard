@@ -1,0 +1,41 @@
+{
+  "tasks": [
+    { "title": "Book the auditorium with the admin office", "owner": "Rahul Verma", "due_text": "by Monday", "status_hint": "done", "evidence_idx": [9, 25], "confidence": 0.95 },
+    { "title": "Design the Annual Day poster and Instagram post", "owner": "Ananya", "due_text": "by Wednesday", "status_hint": "done", "evidence_idx": [10, 11, 33], "confidence": 0.9 },
+    { "title": "Arrange the sound system and lights", "owner": "Kabir Singh", "due_text": null, "status_hint": "done", "evidence_idx": [12, 28], "confidence": 0.8 },
+    { "title": "Write the anchoring script", "owner": "+91 90000 12345", "due_text": "by 1 Dec", "status_hint": "pending", "evidence_idx": [14, 15, 16, 51], "confidence": 0.9 },
+    { "title": "Confirm volunteer snacks with Sharma Caterers", "owner": "Meera Iyer", "due_text": "tomorrow", "status_hint": "done", "evidence_idx": [20, 21, 46], "confidence": 0.9 },
+    { "title": "Reimburse Rahul for the auditorium booking fee", "owner": "Meera Iyer", "due_text": null, "status_hint": "done", "evidence_idx": [26, 27], "confidence": 0.9 },
+    { "title": "Transfer the ₹3,000 advance to the sound vendor", "owner": "Meera Iyer", "due_text": "Friday", "status_hint": "done", "evidence_idx": [28, 29, 45], "confidence": 0.9 },
+    { "title": "Draft the chief guest invitation letter", "owner": "Priya Sharma", "due_text": "by Saturday", "status_hint": "pending", "evidence_idx": [34, 37], "confidence": 0.85 },
+    { "title": "Design the volunteer certificates", "owner": "Ananya", "due_text": "kal tak (by tomorrow)", "status_hint": "done", "evidence_idx": [39, 40, 48], "confidence": 0.9 },
+    { "title": "Get the volunteer certificates printed", "owner": "Meera Iyer", "due_text": "by Wednesday", "status_hint": "pending", "evidence_idx": [48, 49], "confidence": 0.85 },
+    { "title": "Create a Google Form for the volunteer list", "owner": "Rahul Verma", "due_text": "today", "status_hint": "pending", "evidence_idx": [47], "confidence": 0.8 },
+    { "title": "Decide whether to hire a photographer", "owner": null, "due_text": "Friday's call", "status_hint": "unclear", "evidence_idx": [42, 43], "confidence": 0.5 }
+  ],
+  "decisions": [
+    { "text": "Annual Day will be held in the auditorium, not the open ground, because of rain risk", "evidence_idx": [8] },
+    { "text": "Sharma Caterers will provide snacks for volunteers", "evidence_idx": [19, 20] },
+    { "text": "Sound and lights vendor approved at ₹11,000", "evidence_idx": [28, 29] },
+    { "text": "Dress code for the committee is formal", "evidence_idx": [50] }
+  ],
+  "open_questions": [
+    { "text": "Should the event have a theme (Retro or Bollywood)?", "evidence_idx": [22] },
+    { "text": "Do we need a photographer, or will a phone camera do?", "evidence_idx": [42, 43] }
+  ],
+  "budget": [
+    { "label": "Auditorium booking fee", "amount": 5000, "currency": "INR", "status_hint": "paid", "evidence_idx": [26, 27] },
+    { "label": "Sound and lights", "amount": 11000, "currency": "INR", "status_hint": "approved", "evidence_idx": [28, 29] },
+    { "label": "Volunteer snacks (Sharma Caterers)", "amount": 8000, "currency": "INR", "status_hint": "approved", "evidence_idx": [19, 20, 46] },
+    { "label": "Volunteer certificates printing", "amount": 2500, "currency": "INR", "status_hint": "approved", "evidence_idx": [38, 39] }
+  ],
+  "budget_cap": { "amount": 50000, "currency": "INR", "evidence_idx": [6] },
+  "roles": [
+    { "person": "Priya Sharma", "role": "Overall coordinator", "evidence_idx": [4] },
+    { "person": "Meera Iyer", "role": "Treasurer", "evidence_idx": [4, 5] },
+    { "person": "Ananya", "role": "Design (poster, certificates)", "evidence_idx": [10, 39] },
+    { "person": "Kabir Singh", "role": "Sound and lights", "evidence_idx": [12] },
+    { "person": "+91 90000 12345", "role": "Anchoring script (Dev, 2nd year)", "evidence_idx": [14] },
+    { "person": "Rahul Verma", "role": "Venue and volunteers", "evidence_idx": [9, 47] }
+  ]
+}
