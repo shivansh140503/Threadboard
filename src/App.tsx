@@ -27,7 +27,7 @@ import ParseSummary from './components/ParseSummary';
 import ConsentModal from './components/ConsentModal';
 import Extracting from './components/Extracting';
 import ReviewList from './components/ReviewList';
-import BoardReady from './components/BoardReady';
+import Dashboard from './components/Dashboard';
 import Toast, { type ToastData } from './components/Toast';
 
 type Parsed = {
@@ -89,6 +89,14 @@ export default function App() {
   };
 
   const showToast = (text: string) => setToast({ id: Date.now(), text });
+  const showActionToast = (t: Omit<ToastData, 'id'>) => setToast({ id: Date.now(), ...t });
+
+  /** Functional update of the current board; captured id keeps Undo pointed at the right board. */
+  const boardId = currentId;
+  const mutate = useCallback(
+    (fn: (b: Board) => Board) => setBoards((prev) => prev.map((b) => (b.id === boardId ? fn(b) : b))),
+    [boardId],
+  );
 
   // ---- Import ----------------------------------------------------------------
 
@@ -210,18 +218,19 @@ export default function App() {
     showToast('All your data was deleted from this device.');
   };
 
+  const wide = flow.kind === 'dashboard' ? 'max-w-5xl' : 'max-w-2xl';
   const step = flow.kind === 'import' || flow.kind === 'summary' || flow.kind === 'extracting' ? 0 : flow.kind === 'review' ? 1 : 2;
 
   return (
     <div className="min-h-screen">
       <header className="border-b border-line bg-surface">
-        <div className="mx-auto flex max-w-2xl flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className={`mx-auto flex ${wide} flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between`}>
           <h1 className="text-xl font-bold text-accent">ThreadBoard</h1>
           <Stepper current={step} />
         </div>
       </header>
 
-      <main className="mx-auto max-w-2xl px-4 py-6">
+      <main className={`mx-auto ${wide} px-4 py-6`}>
         {flow.kind === 'import' && (
           <>
             <p className="mb-6 text-lg text-ink-muted">Paste your group chat, get a to-do board that shows who's doing what.</p>
@@ -295,12 +304,19 @@ export default function App() {
         )}
 
         {flow.kind === 'dashboard' && board && (
-          <BoardReady
+          <Dashboard
             board={board}
+            boards={boards}
+            messages={messages}
+            mutate={mutate}
+            toast={showActionToast}
+            onSwitchBoard={(id) => {
+              setCurrentId(id);
+              setMessages(loadMessages(id));
+            }}
             onNewChat={() => setFlow({ kind: 'import' })}
             onDeleteAll={deleteAll}
             onBackToReview={() => setFlow({ kind: 'review', warning: null })}
-            onCopied={(ok) => showToast(ok ? 'Results copied.' : "Couldn't copy. Select and copy manually.")}
           />
         )}
 

@@ -160,7 +160,7 @@ export default function ReviewList({ board, messages, warning, onChange, onConti
 
       <div className="fixed inset-x-0 bottom-0 border-t border-line bg-surface/95 backdrop-blur">
         <div className="mx-auto flex max-w-2xl items-center justify-between gap-3 px-4 py-3">
-          <dl className="flex gap-4 text-sm" aria-live="polite">
+          <dl className="flex gap-3 text-sm sm:gap-4" aria-live="polite">
             <Metric label="Reviewed" value={`${m.reviewed}/${m.totalItems}`} />
             <Metric label="Precision" value={pct(m.precision)} />
             <Metric label="Recall" value={pct(m.recall)} />
@@ -170,7 +170,8 @@ export default function ReviewList({ board, messages, warning, onChange, onConti
             onClick={onContinue}
             className="min-h-11 shrink-0 rounded-lg bg-accent px-4 font-semibold text-white hover:bg-accent-strong"
           >
-            Continue to dashboard
+            <span className="sm:hidden">Continue</span>
+            <span className="hidden sm:inline">Continue to dashboard</span>
           </button>
         </div>
       </div>
