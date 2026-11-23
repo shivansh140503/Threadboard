@@ -181,7 +181,9 @@ export async function POST(req: Request): Promise<Response> {
       ? `\n\nYour previous answer failed validation: ${body.retryError}\nReturn corrected JSON only.`
       : '');
 
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY, maxRetries: 1, timeout: 110_000 });
+  // Tolerate copy-paste artefacts (spaces, newlines, surrounding quotes) in the env var.
+  const apiKey = process.env.ANTHROPIC_API_KEY.trim().replace(/^["']|["']$/g, '');
+  const client = new Anthropic({ apiKey, maxRetries: 1, timeout: 110_000 });
   try {
     const useFallback = FALLBACK_MODELS.has(model);
     const response = await client.beta.messages.create({
