@@ -93,8 +93,15 @@ function mergeRoles(all: AiRole[]): AiRole[] {
   const byPerson = new Map<string, AiRole>();
   for (const r of all) {
     const hit = byPerson.get(r.person);
-    if (hit) hit.evidence_idx = union(hit.evidence_idx, r.evidence_idx);
-    else byPerson.set(r.person, { ...r, evidence_idx: [...r.evidence_idx] });
+    if (!hit) {
+      byPerson.set(r.person, { ...r, evidence_idx: [...r.evidence_idx] });
+      continue;
+    }
+    hit.evidence_idx = union(hit.evidence_idx, r.evidence_idx);
+    // A second, different role is kept rather than silently dropped.
+    if (similarity(hit.role, r.role) < 0.5 && !hit.role.toLowerCase().includes(r.role.toLowerCase())) {
+      hit.role = `${hit.role}; ${r.role}`.slice(0, 100);
+    }
   }
   return [...byPerson.values()];
 }

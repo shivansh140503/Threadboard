@@ -185,7 +185,9 @@ export async function POST(req: Request): Promise<Response> {
 
   // Tolerate copy-paste artefacts (spaces, newlines, surrounding quotes) in the env var.
   const apiKey = process.env.ANTHROPIC_API_KEY.trim().replace(/^["']|["']$/g, '');
-  const client = new Anthropic({ apiKey, maxRetries: 1, timeout: 110_000 });
+  // One attempt only, and it must finish inside the function's 120 s maxDuration (vercel.json).
+  // The browser does the single retry, as its own short request.
+  const client = new Anthropic({ apiKey, maxRetries: 0, timeout: 100_000 });
   try {
     const useFallback = FALLBACK_MODELS.has(model);
     const response = await client.beta.messages.create({

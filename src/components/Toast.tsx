@@ -1,15 +1,19 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 export type ToastData = { id: number; text: string; actionLabel?: string; onAction?: () => void };
 
 type Props = { toast: ToastData | null; onDone: () => void; durationMs?: number };
 
 export default function Toast({ toast, onDone, durationMs = 5000 }: Props) {
+  // Timer keyed on the toast's id only, so parent re-renders don't restart the 5 s window.
+  const onDoneRef = useRef(onDone);
+  onDoneRef.current = onDone;
+  const id = toast?.id;
   useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(onDone, durationMs);
+    if (id === undefined) return;
+    const t = setTimeout(() => onDoneRef.current(), durationMs);
     return () => clearTimeout(t);
-  }, [toast, onDone, durationMs]);
+  }, [id, durationMs]);
 
   if (!toast) return null;
   return (

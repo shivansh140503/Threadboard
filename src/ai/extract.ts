@@ -24,6 +24,13 @@ export class ExtractionError extends Error {
   }
 }
 
+/** The model's answer could not be used, but a second try may work (bad JSON, cut off, failed zod). */
+class RetryableAnswer extends Error {
+  constructor(readonly hint: string) {
+    super(hint);
+  }
+}
+
 export type ExtractRequest = { participants: string[]; lines: string[]; retryError?: string };
 
 export type ExtractInput = {
@@ -46,18 +53,20 @@ export type ExtractOutput = { extraction: Extraction; totalChunks: number; faile
 
 const ENDPOINT = '/api/extract';
 
-async function postChunk(body: ExtractRequest, deps: ExtractDeps): Promise<unknown> {
-  const doFetch = deps.fetchImpl ?? fetch;
+type Ctx = { deps: ExtractDeps; signal: AbortSignal };
+
+async function postChunk(body: ExtractRequest, ctx: Ctx): Promise<unknown> {
+  const doFetch = ctx.deps.fetchImpl ?? fetch;
   let res: Response;
   try {
-    res = await doFetch(deps.endpoint ?? ENDPOINT, {
+    res = await doFetch(ctx.deps.endpoint ?? ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
-      signal: deps.signal,
+      signal: ctx.signal,
     });
-  } catch (e) {
-    if (deps.signal?.aborted) throw new ExtractionError('Cancelled.', 'cancelled');
+  } catch {
+    if (ctx.signal.aborted) throw new ExtractionError('Cancelled.', 'cancelled');
     throw new ExtractionError("We couldn't reach the server. Check your connection and try again.", 'network');
   }
   let payload: unknown = null;
@@ -66,11 +75,16 @@ async function postChunk(body: ExtractRequest, deps: ExtractDeps): Promise<unkno
   } catch {
     /* non-JSON error page */
   }
+  const code = (payload as { error?: { code?: string } } | null)?.error?.code;
   if (res.status === 429) {
     throw new ExtractionError(
       'The AI is busy or today’s limit for this demo has been reached. Try again later, or try the sample chat.',
       'limit',
     );
+  }
+  if (code === 'bad_json') throw new RetryableAnswer('Your previous answer was not valid JSON. Return only the JSON object.');
+  if (code === 'truncated') {
+    throw new RetryableAnswer('Your previous answer was cut off. Return the JSON object with shorter titles and only clear items.');
   }
   if (!res.ok) {
     throw new ExtractionError('The AI service is unavailable right now. Your chat is still here; try again in a minute.', 'unavailable');
@@ -107,16 +121,28 @@ function sanitise(ex: Extraction, chunk: Chunk, anon: Anonymizer): Extraction {
   };
 }
 
-async function extractChunk(chunk: Chunk, participants: string[], deps: ExtractDeps): Promise<unknown> {
+/** One attempt: returns validated data or throws RetryableAnswer / ExtractionError. */
+async function attempt(body: ExtractRequest, ctx: Ctx): Promise<Extraction> {
+  const raw = await postChunk(body, ctx);
+  const parsed = ExtractionSchema.safeParse(raw);
+  if (!parsed.success) throw new RetryableAnswer(`Your previous answer failed validation: ${summariseZodError(parsed.error)}`);
+  return parsed.data;
+}
+
+/** Invalid JSON, a cut-off answer or a schema failure gets exactly one retry, told what went wrong. */
+async function extractChunk(chunk: Chunk, participants: string[], ctx: Ctx): Promise<Extraction> {
   const body: ExtractRequest = { participants, lines: chunk.lines.map((l) => l.line) };
-  const first = await postChunk(body, deps);
-  const parsed = ExtractionSchema.safeParse(first);
-  if (parsed.success) return parsed.data;
-  // One retry, telling the model what was wrong.
-  const second = await postChunk({ ...body, retryError: summariseZodError(parsed.error) }, deps);
-  const again = ExtractionSchema.safeParse(second);
-  if (again.success) return again.data;
-  throw new ExtractionError('The AI returned results we could not read.', 'invalid');
+  try {
+    return await attempt(body, ctx);
+  } catch (e) {
+    if (!(e instanceof RetryableAnswer)) throw e;
+    try {
+      return await attempt({ ...body, retryError: e.hint }, ctx);
+    } catch (e2) {
+      if (e2 instanceof RetryableAnswer) throw new ExtractionError('The AI returned results we could not read.', 'invalid');
+      throw e2;
+    }
+  }
 }
 
 /**
@@ -125,6 +151,13 @@ async function extractChunk(chunk: Chunk, participants: string[], deps: ExtractD
  */
 export async function extractChat(input: ExtractInput, deps: ExtractDeps): Promise<ExtractOutput> {
   if (!deps.consent.has(input.chatId)) throw new ConsentRequiredError();
+
+  // Internal abort: a user cancel OR a fatal error (limit reached) stops every worker and in-flight request.
+  const stop = new AbortController();
+  const onUserAbort = () => stop.abort();
+  if (deps.signal?.aborted) stop.abort();
+  deps.signal?.addEventListener('abort', onUserAbort);
+  const ctx: Ctx = { deps, signal: stop.signal };
 
   const anon = input.anonymize ? createAnonymizer(input.participants) : identityAnonymizer;
   const lines = aiInputMessages(input.messages).map((m) => formatLine(m, anon));
@@ -135,19 +168,23 @@ export async function extractChat(input: ExtractInput, deps: ExtractDeps): Promi
   let failed = 0;
   let done = 0;
   let firstError: ExtractionError | null = null;
+  let fatal: ExtractionError | null = null;
   const total = chunks.length;
   deps.onProgress?.({ done: 0, total, label: total ? `Reading messages 1–${Math.min(300, lines.length)}` : '' });
 
   let next = 0;
   const worker = async () => {
-    while (next < chunks.length) {
+    while (next < chunks.length && !stop.signal.aborted) {
       const chunk = chunks[next++]!;
-      if (deps.signal?.aborted) throw new ExtractionError('Cancelled.', 'cancelled');
       try {
-        const data = (await extractChunk(chunk, participants, deps)) as Extraction;
-        results.push(sanitise(data, chunk, anon));
+        results.push(sanitise(await extractChunk(chunk, participants, ctx), chunk, anon));
       } catch (e) {
-        if (e instanceof ExtractionError && (e.code === 'cancelled' || e.code === 'limit')) throw e;
+        if (stop.signal.aborted) return; // another worker already stopped the run
+        if (e instanceof ExtractionError && (e.code === 'cancelled' || e.code === 'limit')) {
+          fatal = e;
+          stop.abort();
+          return;
+        }
         failed++;
         firstError ??= e instanceof ExtractionError ? e : new ExtractionError('Something went wrong reading part of the chat.', 'invalid');
       }
@@ -156,8 +193,14 @@ export async function extractChat(input: ExtractInput, deps: ExtractDeps): Promi
     }
   };
 
-  await Promise.all(Array.from({ length: Math.min(deps.concurrency ?? 3, Math.max(chunks.length, 1)) }, worker));
+  try {
+    await Promise.all(Array.from({ length: Math.min(deps.concurrency ?? 3, Math.max(chunks.length, 1)) }, worker));
+  } finally {
+    deps.signal?.removeEventListener('abort', onUserAbort);
+  }
 
+  if (deps.signal?.aborted) throw new ExtractionError('Cancelled.', 'cancelled');
+  if (fatal) throw fatal;
   if (total > 0 && failed === total && firstError) throw firstError;
   return { extraction: mergeExtractions(results, input.participants), totalChunks: total, failedChunks: failed };
 }

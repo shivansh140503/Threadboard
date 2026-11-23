@@ -69,6 +69,18 @@ describe('review metrics', () => {
     expect(computeMetrics(done).totalItems).toBe(computeMetrics(board).totalItems);
   });
 
+  it('a reviewed task deleted later still counts, so reviewed never exceeds total', () => {
+    let board = buildBoard(parsed.result, sample, meta);
+    for (const t of board.tasks.slice(0, 4)) board = setReview(board, t.id, 'task', 'correct');
+    const before = computeMetrics(board);
+    board = { ...board, tasks: board.tasks.filter((t) => t.id !== board.tasks[0]!.id) };
+    const after = computeMetrics(board);
+    expect(after.totalItems).toBe(before.totalItems);
+    expect(after.taskItems).toBe(before.taskItems);
+    expect(after.reviewed).toBeLessThanOrEqual(after.totalItems);
+    expect(resultsSummary(board)).not.toMatch(/Unreviewed: -/);
+  });
+
   it('the copyable summary contains numbers but no chat content', () => {
     const board = finishReview(buildBoard(parsed.result, sample, meta));
     const s = resultsSummary(board);

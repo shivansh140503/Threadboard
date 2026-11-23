@@ -31,6 +31,18 @@ Phases 1–5 plus documentation all happen on Mon Nov 23. Cut: contacts, decisio
 - **Metrics:** precision = correct ÷ (correct + wrong) over all reviewed items; also task-only precision. Recall = task correct ÷ (task correct + missed), since "missed" is asked about tasks only.
 - **Wrong items are kept but hidden** on the dashboard, so totals behind the accuracy numbers don't change after review.
 
+## Code review fixes (Nov 24)
+- **Anonymize vs amounts:** a phone number now needs a phone shape (optional +code, 10–13 digits, single separators). Ranges ("50000 - 60000"), numbers after ₹/Rs/INR, and two plain 3–6-digit amounts ("15000 20000") are left alone. Remaining ambiguity: a 5+5-digit pair starting 6–9 ("98765 43210") is treated as a phone even if it was meant as two amounts.
+- **Declining consent respects "Keep chat on this device".** Previously the saved preference was used instead of the checkbox.
+- **Fatal errors stop the run:** a limit (429) or cancel aborts every worker and in-flight request, so no more chat text is sent after the user sees the error.
+- **Invalid JSON and cut-off answers get the one retry** (server codes `bad_json`, `truncated`), not only zod failures.
+- **Chunks are sized in UTF-8 bytes** (≤150 KB of lines), since the server measures bytes. Hindi and emoji are 3–4 bytes per character.
+- **Re-importing a chat that already has a board** shows "Open saved board" or "Start over" instead of silently replacing it.
+- **Server makes one attempt within 100 s** (`maxRetries: 0`) so it always finishes inside `maxDuration: 120`.
+- **Undo toast** timer is keyed on the toast's id, so it really lasts 5 s.
+- **Metrics:** a reviewed item deleted later still counts, so "reviewed" never exceeds "total".
+- **Roles:** a second, different role for the same person is kept ("Treasurer; Design lead").
+
 ## Prompt versions
 - **v1** (Nov 23): CLAUDE.md §6 prompt plus three lines: "⏎ marks a line break", `budget_cap` rule, roles = lasting responsibilities, and "empty arrays when nothing found". Known participants are sent in the user message (keeps the system prompt stable). First live run on the synthetic sample (Nov 24): 11 tasks, all matching the hand-made key; but a ₹3,000 advance was listed as its own budget item on top of the ₹11,000 it belonged to, inflating totals.
 - **v2** (Nov 24): added "an advance, deposit or partial payment toward a cost already listed is not a separate budget item; totals and recaps are not new items either."

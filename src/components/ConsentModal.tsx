@@ -5,7 +5,7 @@ type Props = {
   messageCount: number;
   defaultAnonymize: boolean;
   onAllow: (opts: { anonymize: boolean; keepChat: boolean }) => void;
-  onDecline: () => void;
+  onDecline: (opts: { keepChat: boolean }) => void;
   onClose: () => void;
 };
 
@@ -103,7 +103,7 @@ export default function ConsentModal({ messageCount, defaultAnonymize, onAllow, 
           </button>
           <button
             type="button"
-            onClick={onDecline}
+            onClick={() => onDecline({ keepChat })}
             className="min-h-11 flex-1 rounded-lg border border-line px-4 font-semibold hover:bg-canvas"
           >
             Don't allow

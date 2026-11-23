@@ -175,7 +175,7 @@ export default function App() {
       });
   };
 
-  const continueWithoutAi = (parsed: Parsed) => {
+  const continueWithoutAi = (parsed: Parsed, keepChat: boolean) => {
     const b = buildBoard(parsed.result, null, {
       chatName: parsed.chatName,
       isSample: parsed.isSample,
@@ -183,7 +183,7 @@ export default function App() {
       aiUsed: false,
       sourceHash: parsed.chatId,
     });
-    addBoard(finishReview(b), parsed.result.messages, loadPrefs().keepChat);
+    addBoard(finishReview(b), parsed.result.messages, keepChat);
     setFlow({ kind: 'dashboard' });
   };
 
@@ -218,6 +218,7 @@ export default function App() {
     showToast('All your data was deleted from this device.');
   };
 
+  const existingForSummary = flow.kind === 'summary' ? (boards.find((b) => b.sourceHash === flow.parsed.chatId) ?? null) : null;
   const wide = flow.kind === 'dashboard' ? 'max-w-5xl' : 'max-w-2xl';
   const step = flow.kind === 'import' || flow.kind === 'summary' || flow.kind === 'extracting' ? 0 : flow.kind === 'review' ? 1 : 2;
 
@@ -255,18 +256,47 @@ export default function App() {
                 if (re.ok) setFlow({ ...flow, parsed: { ...flow.parsed, result: re.result, confirmedOrder: order } });
               }}
               onBack={() => setFlow({ kind: 'import' })}
-              continueLabel={flow.parsed.isSample ? 'Review the sample results' : 'Find tasks with AI'}
-              continueNote={flow.parsed.isSample ? 'Sample results are prepared in advance. No AI is called.' : undefined}
+              continueLabel={
+                existingForSummary
+                  ? 'Start over'
+                  : flow.parsed.isSample
+                    ? 'Review the sample results'
+                    : 'Find tasks with AI'
+              }
+              continueNote={
+                existingForSummary
+                  ? 'Starting over replaces your saved board for this chat, including ticked tasks and reviews.'
+                  : flow.parsed.isSample
+                    ? 'Sample results are prepared in advance. No AI is called.'
+                    : undefined
+              }
+              onOpenExisting={
+                existingForSummary
+                  ? () => {
+                      setCurrentId(existingForSummary.id);
+                      setMessages(loadMessages(existingForSummary.id));
+                      setFlow(
+                        existingForSummary.timing.reviewDoneAt || !existingForSummary.aiUsed
+                          ? { kind: 'dashboard' }
+                          : { kind: 'review', warning: null },
+                      );
+                    }
+                  : undefined
+              }
               onContinue={() => onContinueFromSummary(flow.parsed)}
               error={flow.error}
-              onSkipAi={flow.parsed.isSample ? undefined : () => continueWithoutAi(flow.parsed)}
+              onSkipAi={flow.parsed.isSample ? undefined : () => continueWithoutAi(flow.parsed, loadPrefs().keepChat)}
             />
             {flow.consentOpen && (
               <ConsentModal
                 messageCount={flow.parsed.result.messages.filter((m) => !m.isSystem).length}
                 defaultAnonymize={loadPrefs().anonymize}
                 onClose={() => setFlow({ ...flow, consentOpen: false })}
-                onDecline={() => continueWithoutAi(flow.parsed)}
+                onDecline={({ keepChat }) => {
+                  // Respect the checkbox even when AI is declined.
+                  savePrefs({ ...loadPrefs(), keepChat });
+                  continueWithoutAi(flow.parsed, keepChat);
+                }}
                 onAllow={({ anonymize, keepChat }) => {
                   consent.grant(flow.parsed.chatId);
                   savePrefs({ anonymize, keepChat });

@@ -19,21 +19,28 @@ export function aiInputMessages(messages: Message[]): Message[] {
   return messages.filter((m) => !m.isSystem && m.sender !== null && m.text.trim() !== '');
 }
 
+const encoder = new TextEncoder();
+
+/** Bytes this line adds to the JSON request body (UTF-8, quotes, escapes, comma). */
+export function lineBytes(line: string): number {
+  return encoder.encode(JSON.stringify(line)).length + 1;
+}
+
 /**
  * Split into chunks of up to `size` lines with `overlap` lines repeated
- * between neighbours, also capped by total characters so each request stays
- * under the server's body limit.
+ * between neighbours, also capped by request bytes (UTF-8, as the server
+ * measures them) so Hindi or emoji-heavy chats stay under the body limit.
  */
-export function chunkLines(lines: Line[], size = 300, overlap = 30, maxChars = 120_000): Chunk[] {
+export function chunkLines(lines: Line[], size = 300, overlap = 30, maxBytes = 150_000): Chunk[] {
   const chunks: Chunk[] = [];
   let start = 0;
   while (start < lines.length) {
     let end = start;
-    let chars = 0;
+    let bytes = 0;
     while (end < lines.length && end - start < size) {
-      const len = (lines[end]?.line.length ?? 0) + 1;
-      if (end > start && chars + len > maxChars) break;
-      chars += len;
+      const len = lineBytes(lines[end]?.line ?? '');
+      if (end > start && bytes + len > maxBytes) break;
+      bytes += len;
       end++;
     }
     const slice = lines.slice(start, end);

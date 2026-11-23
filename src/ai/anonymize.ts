@@ -36,7 +36,21 @@ function escapeRe(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-const PHONE_RE = /\+?\d[\d\s-]{7,}\d/g;
+/**
+ * Phone-like: optional +country code, then 10–13 digits with at most ONE space or hyphen between
+ * digits. Ranges like "50000 - 60000" (space-hyphen-space) never match.
+ */
+const PHONE_RE = /(?<![\d₹$€£])(?:\+\d{1,3}[ -]?)?\d(?:[ -]?\d){9,12}(?!\d)/g;
+/** Text just before a number that marks it as money, e.g. "₹", "Rs.", "INR ". */
+const MONEY_BEFORE = /(?:[₹$€£]|\brs\.?|\binr|\brupees?)\s*$/i;
+
+function looksLikeMoney(full: string, offset: number, match: string): boolean {
+  if (MONEY_BEFORE.test(full.slice(Math.max(0, offset - 8), offset))) return true;
+  if (match.startsWith('+')) return false; // a country code means phone
+  // "15000 20000": two plain amounts of 3–6 digits, neither starting like an Indian mobile (6–9) with 5+5 digits.
+  const groups = match.replace(/^\+\d{1,3}[ -]?/, '').split(/[ -]/);
+  return groups.length === 2 && groups.every((g) => /^\d{3,6}$/.test(g)) && !(groups[0]!.length === 5 && /^[6-9]/.test(groups[0]!));
+}
 const EMAIL_RE = /[\w.+-]+@[\w-]+\.[\w.-]+/g;
 
 export function createAnonymizer(participants: string[]): Anonymizer {
@@ -86,9 +100,9 @@ export function createAnonymizer(participants: string[]): Anonymizer {
     forward(text) {
       let out = text.replace(EMAIL_RE, (m) => numbered(emailTokens, 'Email', m));
       if (nameRe) out = out.replace(nameRe, (m) => tokenOf.get(m.toLowerCase()) ?? m);
-      // 10+ digits only, so dates ("2026-11-21") and amounts stay untouched.
-      out = out.replace(PHONE_RE, (m) =>
-        m.replace(/\D/g, '').length >= 10 ? numbered(phoneTokens, 'Phone', m.trim()) : m,
+      // Phone-shaped numbers only; dates ("2026-11-21") and amounts stay untouched.
+      out = out.replace(PHONE_RE, (m, offset: number, full: string) =>
+        looksLikeMoney(full, offset, m) ? m : numbered(phoneTokens, 'Phone', m.trim()),
       );
       return out;
     },

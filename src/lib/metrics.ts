@@ -27,9 +27,25 @@ export function countAiItems(board: Board): Record<ReviewKind, number> {
   };
 }
 
+function existingItemIds(board: Board): Set<string> {
+  return new Set([
+    ...board.tasks.map((t) => t.id),
+    ...board.budget.items.map((b) => b.id),
+    ...board.decisions.map((d) => d.id),
+    ...board.questions.map((q) => q.id),
+    ...Object.keys(board.roleEvidence).map((pid) => `role:${pid}`),
+  ]);
+}
+
 export function computeMetrics(board: Board): Metrics {
   const counts = countAiItems(board);
-  const totalItems = Object.values(counts).reduce((a, b) => a + b, 0);
+  // A reviewed item deleted later on the dashboard still counts (its verdict is real data),
+  // so totals include it and "reviewed" can never exceed "total".
+  const existing = existingItemIds(board);
+  const orphaned = board.reviews.filter((r) => !existing.has(r.itemId));
+  const orphanedTasks = orphaned.filter((r) => r.kind === 'task').length;
+  counts.task += orphanedTasks;
+  const totalItems = Object.values(counts).reduce((a, b) => a + b, 0) + (orphaned.length - orphanedTasks);
   const correct = board.reviews.filter((r) => r.verdict === 'correct').length;
   const wrong = board.reviews.filter((r) => r.verdict === 'wrong').length;
   const taskCorrect = board.reviews.filter((r) => r.kind === 'task' && r.verdict === 'correct').length;

@@ -119,6 +119,51 @@ describe('validation and retry', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it('retries once when the server reports invalid JSON or a cut-off answer', async () => {
+    for (const code of ['bad_json', 'truncated']) {
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce(new Response(JSON.stringify({ ok: false, error: { code } }), { status: 502 }))
+        .mockResolvedValueOnce(okResponse(emptyResult));
+      const consent = consentStore(memoryKV());
+      consent.grant(CHAT_ID);
+      const out = await extractChat({ chatId: CHAT_ID, messages, participants, anonymize: false }, { consent, fetchImpl: fetchMock });
+      expect(fetchMock, code).toHaveBeenCalledTimes(2);
+      expect(bodies(fetchMock)[1]!.retryError, code).toBeTruthy();
+      expect(out.failedChunks).toBe(0);
+    }
+  });
+
+  it('stops sending further chunks after a limit error', async () => {
+    // 1,500 synthetic messages → 6 chunks
+    const many = Array.from({ length: 1500 }, (_, i) => ({ idx: i, ts: null, sender: 'A', text: `msg ${i}`, isSystem: false }));
+    let calls = 0;
+    const fetchMock = vi.fn(async () => {
+      calls++;
+      return calls === 1 ? new Response('{}', { status: 429 }) : okResponse(emptyResult);
+    });
+    const consent = consentStore(memoryKV());
+    consent.grant(CHAT_ID);
+    await expect(
+      extractChat({ chatId: CHAT_ID, messages: many, participants: ['A'], anonymize: false }, { consent, fetchImpl: fetchMock, concurrency: 1 }),
+    ).rejects.toMatchObject({ code: 'limit' });
+    expect(calls).toBe(1);
+  });
+
+  it('a user cancel aborts the run', async () => {
+    const ac = new AbortController();
+    const fetchMock = vi.fn(async (_u: unknown, init?: RequestInit) => {
+      ac.abort();
+      if (init?.signal?.aborted) throw new DOMException('aborted', 'AbortError');
+      return okResponse(emptyResult);
+    });
+    const consent = consentStore(memoryKV());
+    consent.grant(CHAT_ID);
+    await expect(
+      extractChat({ chatId: CHAT_ID, messages, participants, anonymize: false }, { consent, fetchImpl: fetchMock, signal: ac.signal }),
+    ).rejects.toMatchObject({ code: 'cancelled' });
+  });
+
   it('maps 429 to a friendly limit error', async () => {
     const fetchMock = vi.fn(async () => new Response('{}', { status: 429 }));
     const consent = consentStore(memoryKV());

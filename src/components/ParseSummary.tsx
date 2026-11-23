@@ -16,6 +16,8 @@ type Props = {
   continueNote?: string;
   error?: string | null;
   onSkipAi?: () => void;
+  /** Set when a saved board already exists for this exact chat. */
+  onOpenExisting?: () => void;
 };
 
 export default function ParseSummary(props: Props) {
@@ -95,6 +97,15 @@ export default function ParseSummary(props: Props) {
             ))}
           </ul>
         </details>
+      )}
+
+      {props.onOpenExisting && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-card border border-accent/30 bg-accent-soft p-4 text-sm">
+          <p>You already have a saved board for this chat.</p>
+          <button type="button" onClick={props.onOpenExisting} className="min-h-11 rounded-lg bg-accent px-4 font-semibold text-white">
+            Open saved board
+          </button>
+        </div>
       )}
 
       {props.error && (
