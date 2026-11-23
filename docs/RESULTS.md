@@ -14,7 +14,7 @@ Definitions:
 
 | # | Messages | Items extracted | Correct | Wrong | Missed tasks | Precision | Task precision | Recall | Import→dashboard (min) |
 |---|---------:|----------------:|--------:|------:|-------------:|----------:|---------------:|-------:|-----------------------:|
-| 1 |          |                 |         |       |              |           |                |        |                        |
+| 1 |      227 |              13 |      13 |     0 |            0 |      100% |    100% (8/8) |   100% |                    2.6 |
 | 2 |          |                 |         |       |              |           |                |        |                        |
 | 3 |          |                 |         |       |              |           |                |        |                        |
 | 4 |          |                 |         |       |              |           |                |        |                        |
@@ -23,7 +23,9 @@ Definitions:
 | 7 |          |                 |         |       |              |           |                |        |                        |
 | 8 |          |                 |         |       |              |           |                |        |                        |
 
-**Totals** (pooled, not averaged): precision = Σcorrect / (Σcorrect + Σwrong) = … · recall = Σtask correct / (Σtask correct + Σmissed) = …
+**Totals so far** (1 tester; pooled, not averaged): precision = 13 / (13 + 0) = 100% · recall = 8 / (8 + 0) = 100%. One chat is too few to draw conclusions; these will change as more testers report.
+
+Row notes: #1: 8 tasks + 5 other items (budget, decisions, questions or roles); "missed" is the tester's own count.
 
 ## Sample-chat sessions (reported separately)
 
