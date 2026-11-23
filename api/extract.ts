@@ -6,7 +6,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { z } from 'zod';
 
-export const PROMPT_VERSION = 'v1';
+export const PROMPT_VERSION = 'v2';
 
 const SYSTEM_PROMPT = `You extract project information from a WhatsApp group chat.
 Each message is given as: [idx] sender: text
@@ -22,6 +22,8 @@ Rules:
 - due_text is the deadline in the chat's own words ("by Friday", "kal tak"), or null.
 - status_hint is "done" only if a later message says it was completed; otherwise "pending" or "unclear".
 - amount is a number in the stated currency; if no currency is stated, currency is null.
+- Each budget item is one cost. An advance, deposit or partial payment toward a cost already listed is not a
+  separate budget item; mention it in that item's evidence instead. Totals and recaps are not new items either.
 - budget_cap is the overall budget limit for the project if one is stated, otherwise null.
 - roles are lasting responsibilities a person holds (e.g. treasurer, design lead), not one-off tasks.
 - Every item must include evidence_idx: the indexes of the messages that support it.

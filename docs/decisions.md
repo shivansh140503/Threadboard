@@ -32,4 +32,5 @@ Phases 1–5 plus documentation all happen on Mon Nov 23. Cut: contacts, decisio
 - **Wrong items are kept but hidden** on the dashboard, so totals behind the accuracy numbers don't change after review.
 
 ## Prompt versions
-- **v1** (Nov 23): CLAUDE.md §6 prompt plus three lines: "⏎ marks a line break", `budget_cap` rule, roles = lasting responsibilities, and "empty arrays when nothing found". Known participants are sent in the user message (keeps the system prompt stable). Not yet run against a real chat.
+- **v1** (Nov 23): CLAUDE.md §6 prompt plus three lines: "⏎ marks a line break", `budget_cap` rule, roles = lasting responsibilities, and "empty arrays when nothing found". Known participants are sent in the user message (keeps the system prompt stable). First live run on the synthetic sample (Nov 24): 11 tasks, all matching the hand-made key; but a ₹3,000 advance was listed as its own budget item on top of the ₹11,000 it belonged to, inflating totals.
+- **v2** (Nov 24): added "an advance, deposit or partial payment toward a cost already listed is not a separate budget item; totals and recaps are not new items either."
