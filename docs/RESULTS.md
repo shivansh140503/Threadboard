@@ -25,7 +25,7 @@ Definitions:
 
 **Totals so far** (1 tester; pooled, not averaged): precision = 13 / (13 + 0) = 100% · recall = 8 / (8 + 0) = 100%. One chat is too few to draw conclusions; these will change as more testers report.
 
-Row notes: #1: 8 tasks + 5 other items (budget, decisions, questions or roles); "missed" is the tester's own count.
+Row notes: #1: a friend of the developer, using a group chat they are in; 8 tasks + 5 other items (budget, decisions, questions or roles); "missed" is the tester's own count.
 
 ## Sample-chat sessions (reported separately)
 
