@@ -14,6 +14,8 @@ type Props = {
   onBack: () => void;
   continueLabel: string;
   continueNote?: string;
+  error?: string | null;
+  onSkipAi?: () => void;
 };
 
 export default function ParseSummary(props: Props) {
@@ -93,6 +95,17 @@ export default function ParseSummary(props: Props) {
             ))}
           </ul>
         </details>
+      )}
+
+      {props.error && (
+        <div role="alert" className="rounded-card border border-danger/30 bg-red-50 p-4 text-sm text-danger">
+          <p>{props.error}</p>
+          {props.onSkipAi && (
+            <button type="button" onClick={props.onSkipAi} className="mt-2 min-h-11 font-semibold underline">
+              Continue without AI (add tasks by hand)
+            </button>
+          )}
+        </div>
       )}
 
       <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">

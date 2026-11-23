@@ -18,5 +18,18 @@ Phases 1–5 plus documentation all happen on Mon Nov 23. Cut: contacts, decisio
 - Budget `status_hint` allows `unclear`, mapped to `proposed` on import.
 - `amount` is in major units as the model reads it; converted to integer minor units on import (`Math.round(amount * 100)`), never stored as a float.
 
+## Extraction pipeline (Block 2)
+- **Server is a thin proxy; prompt and output schema live on the server.** The browser sends only `{ participants, lines, retryError? }`. Combined with structured outputs (`output_config.format: json_schema`), the endpoint can only return extraction JSON, which limits abuse of the public URL.
+- **Structured outputs + zod.** The API constrains the JSON shape; the browser still validates every response with zod (AI output is untrusted) and does the single retry with the validation error.
+- **Model:** `MODEL_CHUNK` env var, default `claude-opus-5-5` (current default per Anthropic docs, Nov 2026), `effort: "low"` to keep each chunk fast. Server-side refusal fallback (`fallbacks: "default"`) is enabled for models that support it.
+- **`MODEL_MERGE` is unused.** Merge is deterministic (word-overlap dedupe), per the one-day scope cut. No second model call.
+- **Chunks:** 300 lines, 30 overlap, also capped at 120k characters per request; each message truncated to 1,000 chars. 3 chunks in parallel.
+- **Evidence is sanitised client-side:** indexes outside the chunk are dropped; items left with no evidence are dropped (treated as invented).
+- **Vercel duration:** Hobby with Fluid compute allows up to 300 s (checked Nov 23, 2026). `maxDuration: 120` set for `/api/extract`.
+- **Anonymize** replaces full names, unique first names (3+ letters), phone numbers (10+ digits) and emails. It does **not** replace a surname used on its own (e.g. "Sharma Caterers"), and other details stay in the text; the consent modal says so.
+- **Consent** is per chat (keyed by a hash of the chat text), stored in localStorage; `extractChat()` checks it before anything else. Tested.
+- **Metrics:** precision = correct ÷ (correct + wrong) over all reviewed items; also task-only precision. Recall = task correct ÷ (task correct + missed), since "missed" is asked about tasks only.
+- **Wrong items are kept but hidden** on the dashboard, so totals behind the accuracy numbers don't change after review.
+
 ## Prompt versions
-- **v1** — the system prompt in CLAUDE.md §6, unchanged. (Not yet sent to a model.)
+- **v1** (Nov 23): CLAUDE.md §6 prompt plus three lines: "⏎ marks a line break", `budget_cap` rule, roles = lasting responsibilities, and "empty arrays when nothing found". Known participants are sent in the user message (keeps the system prompt stable). Not yet run against a real chat.
