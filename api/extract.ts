@@ -172,7 +172,7 @@ export async function POST(req: Request): Promise<Response> {
     return json(400, err('bad_request', 'Malformed request.'), origin, started);
   }
 
-  if (!process.env.ANTHROPIC_API_KEY) return json(503, err('not_configured', 'AI is not configured.'), origin, started);
+  if (!process.env.ANTHROPIC_API_KEY) return json(503, err('not_configured', 'AI is not configured (no key on server).'), origin, started);
 
   const model = process.env.MODEL_CHUNK || 'claude-opus-5-5';
   const userContent =
@@ -209,10 +209,12 @@ export async function POST(req: Request): Promise<Response> {
     return json(200, { ok: true, data, promptVersion: PROMPT_VERSION }, origin, started);
   } catch (e) {
     if (e instanceof Anthropic.RateLimitError) return json(429, err('provider_busy', 'The AI is busy. Try again shortly.'), origin, started);
-    if (e instanceof Anthropic.AuthenticationError || e instanceof Anthropic.PermissionDeniedError) {
-      return json(503, err('not_configured', 'AI is not configured.'), origin, started);
+    if (e instanceof Anthropic.AuthenticationError) return json(503, err('auth_failed', 'AI key was rejected.'), origin, started);
+    if (e instanceof Anthropic.PermissionDeniedError) return json(503, err('permission_denied', 'AI key lacks access.'), origin, started);
+    if (e instanceof Anthropic.APIError) {
+      // Status only: no message text, which could echo request content.
+      return json(502, err('provider_error', `The AI service returned an error (${e.status ?? 'unknown'}).`), origin, started);
     }
-    if (e instanceof Anthropic.APIError) return json(502, err('provider_error', 'The AI service returned an error.'), origin, started);
     return json(502, err('unknown', 'Something went wrong.'), origin, started);
   }
 }
